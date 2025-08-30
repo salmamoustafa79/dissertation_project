@@ -1,0 +1,94 @@
+library(car)
+library(stargazer)
+library(dplyr)
+library(readxl)
+library(betareg)
+
+master_df <- master_regression_dataset_BiCM2
+
+regression_df <- master_df %>%
+  dplyr::select(
+    w_c, w_s,
+    same_brand, same_category, price_i, price_j, promo_overlap,
+    degree_comp_diff, betweenness_comp_diff, clustering_comp_diff,
+    degree_subs_diff, betweenness_subs_diff, clustering_subs_diff
+  )
+
+# COMP MODEL (regression analysis for complementarity score as a DV)
+
+# Model 1: Product-level variables ONLY
+comp_model_1 <- lm(w_c ~ same_brand + same_category + price_i + price_j + promo_overlap,
+                   data = regression_df)
+
+# Model 2: Network variables (Complement network ONLY)
+comp_model_2 <- lm(w_c ~ degree_comp_diff + betweenness_comp_diff + clustering_comp_diff,
+                   data = regression_df)
+
+# Model 3: Full model (Product + Complement network)
+comp_model_3 <- lm(w_c ~ same_brand + same_category + price_i + price_j + promo_overlap +
+                     degree_comp_diff + betweenness_comp_diff + clustering_comp_diff,
+                   data = regression_df)
+
+# SUBS MODEL (regression analysis for subsituability score as DV)
+
+# Model 1: Product-level variables ONLY
+subs_model_1 <- lm(w_s ~ same_brand + same_category + price_i + price_j + promo_overlap,
+                   data = regression_df)
+
+# Model 2: Network variables (Substitute network ONLY)
+subs_model_2 <- lm(w_s ~ degree_subs_diff + betweenness_subs_diff + clustering_subs_diff,
+                   data = regression_df)
+
+# Model 3: Full model (Product + Substitute network)
+subs_model_3 <- lm(w_s ~ same_brand + same_category + price_i + price_j + promo_overlap +
+                     degree_subs_diff + betweenness_subs_diff + clustering_subs_diff,
+                   data = regression_df)
+
+
+# Multicollineary checks VIF
+
+cat("\n--- VIF CHECKS ---\n")
+print(vif(comp_model_3))
+print(vif(subs_model_3))
+
+# Mean VIF helper
+mean_vif <- function(model) mean(vif(model))
+cat("\nMean VIF (Comp Model 3):", mean_vif(comp_model_3), "\n")
+cat("Mean VIF (Subs Model 3):", mean_vif(subs_model_3), "\n")
+
+# Using stargazer to export the results
+
+# Complementarity models
+stargazer(comp_model_1, comp_model_2, comp_model_3,
+          type = "html",
+          out = "complementarity_results_final_BICM2.html",
+          title = "Regression Results for Complementarity Score", 
+          dep.var.labels = "Complementarity Score",
+          column.labels = c("Model 1: Product Only", "Model 2: Network Only", "Model 3: Full Model"),
+          covariate.labels = c("Same Brand", "Same Category", "Price (Product i)", "Price (Product j)", "Promotion Overlap",
+                               "Degree Comp Diff", "Betweenness Comp Diff", "Clustering Comp Diff"),
+          standardized = TRUE, 
+          no.space = TRUE,
+          align = TRUE) 
+
+# Substitutability models
+stargazer(subs_model_1, subs_model_2, subs_model_3,
+          type = "html",
+          out = "substitutability_results_final_BICM2.html",
+          title = "Regression Results for Substitutability Score", 
+          dep.var.labels = "Substitutability Score",
+          column.labels = c("Model 1: Product Only", "Model 2: Network Only", "Model 3: Full Model"),
+          covariate.labels = c("Same Brand", "Same Category", "Price (Product i)", "Price (Product j)", "Promotion Overlap",
+                               "Degree Subs Diff", "Betweenness Subs Diff", "Clustering Subs Diff"),
+          standardized = TRUE, 
+          no.space = TRUE,
+          align = TRUE) 
+
+  
+summary(comp_model_1)
+summary(comp_model_2)
+summary(comp_model_3)
+
+summary(subs_model_1)
+summary(subs_model_2)
+summary(subs_model_3)
